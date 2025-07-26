@@ -1,5 +1,6 @@
 package com.circuitbreaker.autoconfigure;
 
+import com.circuitbreaker.aop.CircuitBreakerAspect;
 import com.circuitbreaker.core.CircuitBreakerRegistry;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;

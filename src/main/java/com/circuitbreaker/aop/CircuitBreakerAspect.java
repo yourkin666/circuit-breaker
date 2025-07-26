@@ -1,4 +1,4 @@
-package com.circuitbreaker.autoconfigure;
+package com.circuitbreaker.aop;
 
 import com.circuitbreaker.annotation.CircuitBreakerProtected;
 import com.circuitbreaker.core.CircuitBreakerConfig;
@@ -52,8 +52,6 @@ public class CircuitBreakerAspect {
                         }
                     });
 
-        } catch (CircuitBreakerException ex) {
-            return tryFallback(joinPoint, circuitBreakerProtected, ex);
         } catch (Exception ex) {
             return tryFallback(joinPoint, circuitBreakerProtected, ex);
         }

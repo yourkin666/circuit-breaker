@@ -140,11 +140,6 @@ public class CircuitBreakerConfig {
                             minimumNumberOfCalls, slidingWindowSize));
         }
 
-        if (permittedNumberOfCallsInHalfOpenState > minimumNumberOfCalls) {
-            System.err.println("Warning: Permitted calls in half-open state (" +
-                    permittedNumberOfCallsInHalfOpenState + ") exceeds minimum number of calls (" +
-                    minimumNumberOfCalls + ") for circuit breaker: " + name);
-        }
     }
 
     // Getter methods
