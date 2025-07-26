@@ -133,13 +133,27 @@ public class CircuitBreakerMetrics {
     }
 
     /**
+     * 统一的状态转换方法
+     */
+    private boolean transitionTo(CircuitBreakerState from, CircuitBreakerState to) {
+        if (state.compareAndSet(from, to)) {
+            if (to == CircuitBreakerState.OPEN) {
+                openStateStartTime.set(System.currentTimeMillis());
+            }
+            if (from == CircuitBreakerState.HALF_OPEN || to == CircuitBreakerState.HALF_OPEN) {
+                resetHalfOpenCounters();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * 转换到OPEN状态
      */
     private void transitionToOpen() {
-        if (state.compareAndSet(CircuitBreakerState.CLOSED, CircuitBreakerState.OPEN) ||
-                state.compareAndSet(CircuitBreakerState.HALF_OPEN, CircuitBreakerState.OPEN)) {
-            openStateStartTime.set(System.currentTimeMillis());
-            resetHalfOpenCounters();
+        if (!transitionTo(CircuitBreakerState.CLOSED, CircuitBreakerState.OPEN)) {
+            transitionTo(CircuitBreakerState.HALF_OPEN, CircuitBreakerState.OPEN);
         }
     }
 
@@ -147,8 +161,7 @@ public class CircuitBreakerMetrics {
      * 转换到HALF_OPEN状态并允许请求
      */
     private boolean transitionToHalfOpenAndAllow() {
-        if (state.compareAndSet(CircuitBreakerState.OPEN, CircuitBreakerState.HALF_OPEN)) {
-            resetHalfOpenCounters();
+        if (transitionTo(CircuitBreakerState.OPEN, CircuitBreakerState.HALF_OPEN)) {
             return tryAcquirePermit();
         }
         return false;
@@ -158,11 +171,7 @@ public class CircuitBreakerMetrics {
      * 转换到CLOSED状态
      */
     private void transitionToClosed() {
-        if (state.compareAndSet(CircuitBreakerState.HALF_OPEN, CircuitBreakerState.CLOSED)) {
-            resetHalfOpenCounters();
-            // 可选：重置滑动窗口以获得新的开始
-            // slidingWindow.reset();
-        }
+        transitionTo(CircuitBreakerState.HALF_OPEN, CircuitBreakerState.CLOSED);
     }
 
     /**

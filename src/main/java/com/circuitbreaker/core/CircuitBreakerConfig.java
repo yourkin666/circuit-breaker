@@ -10,6 +10,11 @@ import com.circuitbreaker.exception.CircuitBreakerConfigurationException;
  */
 public class CircuitBreakerConfig {
 
+    // 配置常量
+    private static final int MAX_SLIDING_WINDOW_SIZE = 10000;
+    private static final int MAX_HALF_OPEN_CALLS = 100;
+    private static final long MIN_WAIT_DURATION_MS = 1000;
+
     private final String name;
     private final float failureRateThreshold;
     private final int minimumNumberOfCalls;
@@ -76,9 +81,9 @@ public class CircuitBreakerConfig {
             throw new CircuitBreakerConfigurationException("slidingWindowSize", size,
                     "Sliding window size must be positive");
         }
-        if (size > 10000) {
+        if (size > MAX_SLIDING_WINDOW_SIZE) {
             throw new CircuitBreakerConfigurationException("slidingWindowSize", size,
-                    "Sliding window size should not exceed 10000 for performance reasons");
+                    "Sliding window size should not exceed " + MAX_SLIDING_WINDOW_SIZE + " for performance reasons");
         }
         return size;
     }
@@ -91,9 +96,9 @@ public class CircuitBreakerConfig {
             throw new CircuitBreakerConfigurationException("waitDurationInOpenState", duration,
                     "Wait duration in open state must be positive");
         }
-        if (duration < 1000) {
+        if (duration < MIN_WAIT_DURATION_MS) {
             throw new CircuitBreakerConfigurationException("waitDurationInOpenState", duration,
-                    "Wait duration in open state should be at least 1000ms (1 second)");
+                    "Wait duration in open state should be at least " + MIN_WAIT_DURATION_MS + "ms");
         }
         return duration;
     }
@@ -106,9 +111,9 @@ public class CircuitBreakerConfig {
             throw new CircuitBreakerConfigurationException("permittedNumberOfCallsInHalfOpenState", calls,
                     "Permitted number of calls in half-open state must be positive");
         }
-        if (calls > 100) {
+        if (calls > MAX_HALF_OPEN_CALLS) {
             throw new CircuitBreakerConfigurationException("permittedNumberOfCallsInHalfOpenState", calls,
-                    "Permitted number of calls in half-open state should not exceed 100");
+                    "Permitted number of calls in half-open state should not exceed " + MAX_HALF_OPEN_CALLS);
         }
         return calls;
     }
@@ -135,10 +140,8 @@ public class CircuitBreakerConfig {
                             minimumNumberOfCalls, slidingWindowSize));
         }
 
-        // 半开状态调用次数建议不超过最小调用次数
         if (permittedNumberOfCallsInHalfOpenState > minimumNumberOfCalls) {
-            // 这里只是警告，不抛异常
-            System.out.println("Warning: Permitted calls in half-open state (" +
+            System.err.println("Warning: Permitted calls in half-open state (" +
                     permittedNumberOfCallsInHalfOpenState + ") exceeds minimum number of calls (" +
                     minimumNumberOfCalls + ") for circuit breaker: " + name);
         }

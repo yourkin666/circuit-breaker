@@ -9,8 +9,6 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -26,8 +24,6 @@ import java.lang.reflect.Method;
 @Component
 public class CircuitBreakerAspect {
 
-    private static final Logger log = LoggerFactory.getLogger(CircuitBreakerAspect.class);
-
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
@@ -39,11 +35,7 @@ public class CircuitBreakerAspect {
             throws Throwable {
         String circuitBreakerName = circuitBreakerProtected.name();
 
-        log.debug("Executing method {} with circuit breaker {}",
-                joinPoint.getSignature().toShortString(), circuitBreakerName);
-
         try {
-            // 创建配置并执行受保护的调用
             CircuitBreakerConfig config = new CircuitBreakerConfig(circuitBreakerName, circuitBreakerProtected);
 
             return circuitBreakerRegistry.executeSupplier(
@@ -52,21 +44,17 @@ public class CircuitBreakerAspect {
                     () -> {
                         try {
                             return joinPoint.proceed();
-                        } catch (Throwable throwable) {
-                            // 简单的异常转换
-                            throw throwable instanceof RuntimeException
-                                    ? (RuntimeException) throwable
-                                    : new RuntimeException(throwable);
+                        } catch (Throwable t) {
+                            if (t instanceof RuntimeException) {
+                                throw (RuntimeException) t;
+                            }
+                            throw new RuntimeException(t);
                         }
                     });
 
         } catch (CircuitBreakerException ex) {
-            log.warn("Circuit breaker {} triggered: {}", circuitBreakerName, ex.getMessage());
             return tryFallback(joinPoint, circuitBreakerProtected, ex);
-
         } catch (Exception ex) {
-            log.error("Error executing method {} with circuit breaker {}",
-                    joinPoint.getSignature().toShortString(), circuitBreakerName, ex);
             return tryFallback(joinPoint, circuitBreakerProtected, ex);
         }
     }
@@ -104,20 +92,13 @@ public class CircuitBreakerAspect {
             System.arraycopy(args, 0, fallbackArgs, 0, args.length);
             fallbackArgs[args.length] = originalException;
 
-            // 查找并执行fallback方法
             Method fallbackMethod = target.getClass().getDeclaredMethod(fallbackMethodName, fallbackParameterTypes);
             fallbackMethod.setAccessible(true);
-
-            log.debug("Executing fallback method {} for circuit breaker", fallbackMethodName);
             return fallbackMethod.invoke(target, fallbackArgs);
 
         } catch (NoSuchMethodException ex) {
-            log.error("Fallback method {} not found. Expected signature: {}({}, Exception)",
-                    fallbackMethodName, fallbackMethodName,
-                    signature.getParameterTypes());
             throw new RuntimeException("Fallback method not found: " + fallbackMethodName, originalException);
         } catch (Exception ex) {
-            log.error("Error executing fallback method {}", fallbackMethodName, ex);
             throw new RuntimeException("Fallback execution failed", originalException);
         }
     }
